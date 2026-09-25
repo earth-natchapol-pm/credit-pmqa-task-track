@@ -10,6 +10,7 @@ const STORAGE_KEY = 'credit-pmqa-feature-workflow';
 
 const normalizeList = (values, fallback) => Array.from(new Set((Array.isArray(values) ? values : fallback).map(item => String(item).trim()).filter(Boolean))).slice(0, 50);
 const toValueKey = value => String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'status';
+export const toStatusKey = toValueKey;
 
 export function getFeatureWorkflowConfig() {
   if (typeof window === 'undefined') {

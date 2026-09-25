@@ -9,7 +9,6 @@ import FeatureModal from './features/FeatureModal.jsx';
 import ProductPanel from './products/ProductPanel.jsx';
 import ProductModal from './products/ProductModal.jsx';
 import FeatureSettingsModal from './features/SettingsModal.jsx';
-import './features/FeatureTimeline.css';
 import { createPerson, deletePerson, listPeople, updatePerson } from './people/repository.js';
 import { createFeature, deleteFeature, listFeatures, updateFeature } from './features/repository.js';
 import { createProduct, deleteProduct, listProducts, updateProduct } from './products/repository.js';
@@ -26,7 +25,6 @@ const initialTasks = [
 const navItems = [
   ['overview', '◈', 'Overview'],
   ['tasks', '☷', 'All tasks'],
-  ['timeline', '▤', 'QA timeline'],
   ['features', '◇', 'Features'],
   ['people', '♙', 'People'],
   ['products', '▣', 'Products'],
@@ -75,45 +73,6 @@ function TimelinePanel() {
   const format = date => date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
   const moveWeek = amount => setWeekOffset(current => current + amount);
   return <div className="panel timeline-panel"><div className="panel-header"><div><p className="eyebrow">RESOURCE PLANNING</p><h2>QA timeline</h2></div><button className="icon-button small" onClick={() => moveWeek(1)} aria-label="Next week">→</button></div><div className="week-control"><button onClick={() => moveWeek(-1)} aria-label="Previous week">‹</button><strong>{format(start)} – {format(end)}</strong><button onClick={() => moveWeek(1)} aria-label="Next week">›</button></div><div className="timeline-grid"><div className="timeline-head"><span></span><span>MON 21</span><span>TUE 22</span><span>WED 23</span><span>THU 24</span><span>FRI 25</span></div><TimelineRow person="Jamie M." role="QA lead" bars={[[0, 'Regression', 'bar-green', '100%'], [1, 'Regression', 'bar-green', '70%'], [2, 'API checks', 'bar-yellow', '82%']]} /><TimelineRow person="Ravi S." role="QA engineer" bars={[[0, 'Credit limit', 'bar-purple', '65%'], [1, 'Credit limit', 'bar-purple', '100%'], [2, 'Credit limit', 'bar-purple', '55%']]} /><TimelineRow person="Tessa C." role="QA engineer" bars={[[1, 'Onboarding', 'bar-orange', '90%'], [2, 'Onboarding', 'bar-orange', '100%'], [3, 'Onboarding', 'bar-orange', '75%']]} /></div><div className="capacity-note"><span className="status-dot" /><div><strong>Capacity looks healthy</strong><small>4 hours unallocated across the team this week.</small></div><span className="arrow">→</span></div></div>;
-}
-
-const timelineDate = value => value ? new Date(`${value}T12:00:00`) : null;
-const timelineLabel = value => value.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }).toUpperCase();
-const timelineInitials = name => String(name || '').split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase() || '—';
-
-function FeatureGanttPanel({ features, people, loading, error }) {
-  const [productFilter, setProductFilter] = useState('All');
-  const [personFilter, setPersonFilter] = useState('All');
-  const [priorityFilter, setPriorityFilter] = useState('All');
-  const products = Array.from(new Map(features.flatMap(feature => (feature.productNames || []).map((name, index) => [name, feature.productAcronyms?.[index] || name])).entries()).entries()).map(([name, acronym]) => ({ name, acronym }));
-  const visibleFeatures = features.filter(feature => {
-    const productMatch = productFilter === 'All' || (feature.productNames || []).includes(productFilter) || feature.product?.split(',').map(item => item.trim()).includes(productFilter);
-    const assignedIds = [...(feature.pmPicIds || []), ...(feature.qaPicIds || []), feature.pmPicId, feature.qaPicId].filter(Boolean).map(String);
-    const assignedNames = `${feature.pmPic || ''},${feature.qaPic || ''}`.split(',').map(item => item.trim());
-    const personMatch = personFilter === 'All' || assignedIds.includes(personFilter) || assignedNames.includes(personFilter);
-    return productMatch && personMatch && (priorityFilter === 'All' || feature.priority === priorityFilter);
-  });
-  const datedValues = visibleFeatures.flatMap(feature => [feature.uatStart, feature.uatEnd, feature.liveStart, feature.liveEnd, ...(feature.subtasks || []).flatMap(subtask => [subtask.startDate, subtask.endDate])]).filter(Boolean).map(timelineDate);
-  const today = new Date(2026, 8, 24);
-  const rangeStart = new Date(Math.min(today.getTime(), ...(datedValues.length ? datedValues.map(date => date.getTime()) : [today.getTime()])));
-  const rangeEnd = new Date(Math.max(today.getTime() + (14 * 86400000), ...(datedValues.length ? datedValues.map(date => date.getTime()) : [today.getTime() + (14 * 86400000)])));
-  rangeStart.setDate(rangeStart.getDate() - 2);
-  rangeEnd.setDate(rangeEnd.getDate() + 2);
-  const days = [];
-  for (const date = new Date(rangeStart); date <= rangeEnd; date.setDate(date.getDate() + 1)) days.push(new Date(date));
-  const totalDays = days.length;
-  const position = (startValue, endValue) => {
-    const start = timelineDate(startValue) || rangeStart;
-    const end = timelineDate(endValue) || start;
-    const startOffset = Math.max(0, Math.round((start - rangeStart) / 86400000));
-    const duration = Math.max(1, Math.round((end - start) / 86400000) + 1);
-    return { left: `${(startOffset / totalDays) * 100}%`, width: `${(Math.min(duration, totalDays - startOffset) / totalDays) * 100}%` };
-  };
-  const getPeople = (feature, field, fallback) => {
-    const ids = feature[field] || (feature[fallback] ? [feature[fallback]] : []);
-    return people.filter(person => ids.some(id => String(id) === String(person.id))).map(person => person.name).join(', ') || feature[fallback.replace('Ids', '')] || 'Unassigned';
-  };
-  return <section className="feature-gantt-view"><div className="features-heading"><div><p className="eyebrow">RESOURCE PLANNING</p><h1>Features timeline</h1><p className="subheading">See each feature, its PICs, and the UAT and Live Testing windows at a glance.</p></div></div>{error && <div className="people-alert">{error}</div>}<div className="gantt-filters"><label>Product<select value={productFilter} onChange={event => setProductFilter(event.target.value)}><option>All</option>{products.map(product => <option key={product.name} value={product.name}>{product.acronym} · {product.name}</option>)}</select></label><label>People<select value={personFilter} onChange={event => setPersonFilter(event.target.value)}><option>All</option>{people.map(person => <option key={person.id || person.name} value={String(person.id || person.name)}>{person.name}</option>)}</select></label><label>Priority<select value={priorityFilter} onChange={event => setPriorityFilter(event.target.value)}><option>All</option>{['P0', 'P1', 'P2', 'P3'].map(priority => <option key={priority}>{priority}</option>)}</select></label><button type="button" className="secondary-button compact" onClick={() => { setProductFilter('All'); setPersonFilter('All'); setPriorityFilter('All'); }}>Reset filters</button><span className="gantt-filter-count">{visibleFeatures.length} feature{visibleFeatures.length === 1 ? '' : 's'}</span></div>{loading ? <div className="people-empty">Loading feature timeline...</div> : <div className="gantt-shell"><div className="gantt-scroll"><div className="gantt-grid" style={{ '--gantt-days': totalDays }}><div className="gantt-corner"><span>FEATURE / PICs</span></div><div className="gantt-dates">{days.map((date, index) => <span className={date.toDateString() === today.toDateString() ? 'today' : ''} key={date.toISOString()}>{index === 0 || date.getDate() === 1 || date.getDay() === 1 ? timelineLabel(date) : ''}</span>)}</div>{visibleFeatures.length ? visibleFeatures.map(feature => { const pm = getPeople(feature, 'pmPicIds', 'pmPic'); const qa = getPeople(feature, 'qaPicIds', 'qaPic'); return <div className="gantt-feature-row" key={feature.id || feature.name}><div className="gantt-feature-label"><strong>{feature.name}</strong><small>PM {pm}</small><small>QA {qa}</small></div><div className="gantt-track"><div className="gantt-grid-lines" />{feature.uatStart || feature.uatEnd ? <span className="gantt-bar gantt-uat" style={position(feature.uatStart, feature.uatEnd)}><b>UAT</b><small>{feature.uatStatus || 'Planned'}</small></span> : null}{feature.liveStart || feature.liveEnd ? <span className="gantt-bar gantt-live" style={position(feature.liveStart, feature.liveEnd)}><b>LIVE</b><small>{feature.liveStatus || 'Planned'}</small></span> : null}</div></div>; }) : <div className="gantt-empty">No features match these filters.</div>}</div></div><div className="gantt-legend"><span><i className="legend-uat" />UAT</span><span><i className="legend-live" />Live Testing</span><span><i className="legend-today" />Today</span></div></div>}</section>;
 }
 
 function TimelineRow({ person, role, bars }) {
@@ -168,6 +127,5 @@ export default function App() {
   const openEditProduct = product => { setEditingProduct(product); setShowProductModal(true); };
   const saveProduct = async product => { try { const savedProduct = editingProduct ? await updateProduct(product) : await createProduct(product); setProducts(current => editingProduct ? current.map(item => item.id === editingProduct.id ? savedProduct : item) : [...current, savedProduct]); setProductsError(''); setShowProductModal(false); setEditingProduct(null); } catch (error) { setProductsError(error.message); } };
   const removeProduct = async product => { if (!window.confirm(`Remove ${product.name} from the product list?`)) return; try { await deleteProduct(product); setProducts(current => current.filter(item => item.id && product.id ? item.id !== product.id : item !== product)); setProductsError(''); } catch (error) { setProductsError(error.message); } };
-  if (activeView === 'timeline') return <div className="app-shell"><Sidebar activeView={activeView} setActiveView={setActiveView} taskCount={tasks.length + 18} /><main className="main-content"><header className="topbar"><div className="breadcrumbs"><span>Credit Platform</span><b>/</b><strong>Timeline</strong></div><div className="top-actions"><Avatar /></div></header><div className="page-wrap"><FeatureGanttPanel features={features} people={people} loading={featuresLoading} error={featuresError} /></div></main></div>;
   return <div className="app-shell"><Sidebar activeView={activeView} setActiveView={setActiveView} taskCount={tasks.length + 18} /><main className="main-content"><header className="topbar"><div className="breadcrumbs"><span>Credit Platform</span><b>/</b><strong>{activeView === 'overview' ? 'Overview' : activeView[0].toUpperCase() + activeView.slice(1)}</strong></div><div className="top-actions"><button className="icon-button" aria-label="Search">⌕</button><button className="icon-button" aria-label="Notifications">♢<i /></button><Avatar /></div></header><div className="page-wrap">{activeView === 'people' ? <PeoplePanel people={people} loading={peopleLoading} error={peopleError} onAdd={openAddPerson} onEdit={openEditPerson} onRemove={removePerson} /> : activeView === 'products' ? <ProductPanel products={products} loading={productsLoading} error={productsError} onAdd={openAddProduct} onEdit={openEditProduct} onRemove={removeProduct} /> : activeView === 'features' ? <FeaturePanel features={features} people={people} products={products} loading={featuresLoading} error={featuresError} onAdd={openAddFeature} onEdit={openEditFeature} onRemove={removeFeature} onOpenSettings={() => setShowFeatureSettingsModal(true)} /> : <><section className="page-heading"><div><p className="eyebrow">TUESDAY, 22 SEPTEMBER 2026</p><h1>Good morning, Alex <span>✳</span></h1><p className="subheading">Here’s what needs your attention across Credit Platform.</p></div><button className="primary-button" onClick={() => setShowModal(true)}><span>＋</span> New task</button></section><Metrics taskCount={tasks.length + 18} /><section className="content-grid"><TasksPanel tasks={tasks} setTasks={setTasks} activeView={activeView} setActiveView={setActiveView} /><div className="right-column"><TimelinePanel /><ReleasePanel /></div></section></>}</div></main>{showModal && <TaskModal onClose={() => setShowModal(false)} onAdd={addTask} />}{showPeopleModal && <PeopleModal person={editingPerson} onClose={() => { setShowPeopleModal(false); setEditingPerson(null); }} onSave={savePerson} />}{showFeatureModal && <FeatureModal feature={editingFeature} people={people} products={products} onClose={() => { setShowFeatureModal(false); setEditingFeature(null); }} onSave={saveFeature} />}{showProductModal && <ProductModal product={editingProduct} onClose={() => { setShowProductModal(false); setEditingProduct(null); }} onSave={saveProduct} />}{showFeatureSettingsModal && <FeatureSettingsModal onClose={() => setShowFeatureSettingsModal(false)} />}</div>;
 }

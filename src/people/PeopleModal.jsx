@@ -1,11 +1,12 @@
 import { peopleRoles } from '../config.js';
+import { initialsForName } from './repository.js';
 
 export default function PeopleModal({ person, onClose, onSave }) {
   const submit = event => {
     event.preventDefault();
     const data = new FormData(event.currentTarget);
     const name = data.get('name');
-    const initials = name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase();
+    const initials = initialsForName(name);
     onSave({ ...(person || {}), name, role: data.get('role'), initials, tone: person?.tone || 'avatar-orange', focus: data.get('focus') || 'Credit Platform' });
   };
 

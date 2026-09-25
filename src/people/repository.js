@@ -1,12 +1,14 @@
 import { initialPeople } from './data.js';
 import { hasSupabaseConfig, supabase } from '../lib/supabase.js';
 
+export const initialsForName = name => name.trim().split(/\s+/).filter(Boolean).map(part => part[0]).join('').slice(0, 2).toUpperCase();
+
 const mapMember = member => ({
   id: member.id,
   name: member.name,
   role: member.role,
   focus: member.focus_area,
-  initials: member.initials,
+  initials: initialsForName(member.name),
   tone: member.tone,
 });
 
@@ -19,14 +21,14 @@ export async function listPeople() {
 
 export async function createPerson(person) {
   if (!hasSupabaseConfig) return person;
-  const { data, error } = await supabase.from('team_members').insert({ name: person.name, role: person.role, focus_area: person.focus, initials: person.initials, tone: person.tone }).select().single();
+  const { data, error } = await supabase.from('team_members').insert({ name: person.name, role: person.role, focus_area: person.focus, initials: initialsForName(person.name), tone: person.tone }).select().single();
   if (error) throw error;
   return mapMember(data);
 }
 
 export async function updatePerson(person) {
   if (!hasSupabaseConfig) return person;
-  const { data, error } = await supabase.from('team_members').update({ name: person.name, role: person.role, focus_area: person.focus, initials: person.initials }).eq('id', person.id).select().single();
+  const { data, error } = await supabase.from('team_members').update({ name: person.name, role: person.role, focus_area: person.focus, initials: initialsForName(person.name) }).eq('id', person.id).select().single();
   if (error) throw error;
   return mapMember(data);
 }
